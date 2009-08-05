@@ -1,13 +1,14 @@
 package com.aradine.android.raop;
 
+import java.util.Vector;
+
 import android.app.ListActivity;
 
 import android.os.Bundle;
-import android.provider.Contacts.Intents.UI;
+import android.os.Handler;
 import android.util.Log;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.widget.TextView;
 
 public class MainPage extends ListActivity {
     /** Called when the activity is first created. */
@@ -16,6 +17,17 @@ public class MainPage extends ListActivity {
     boolean paused = false;
     int numItems = 0;
     ArrayAdapter<RAOPDeviceDescription> discoveredDevicesAdapter;
+    Vector<RAOPDeviceDescription> discoveredDevicesVector = new Vector<RAOPDeviceDescription>();
+    
+    private final Handler uiHandler = new Handler();
+    private final Runnable listUpdateRunnable = new Runnable() {
+    	public void run() {
+    		discoveredDevicesAdapter.clear();
+    		for (int i = 0; i < discoveredDevicesVector.size(); i++) {
+    			discoveredDevicesAdapter.add(discoveredDevicesVector.elementAt(i));
+    		}
+    	}
+    };
     
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -29,7 +41,7 @@ public class MainPage extends ListActivity {
         Thread refreshListTimer = new Thread() {
         	public void run() {
         		if (refreshing)
-        			Log.e("MainPage", "Starting to refresh devices.");
+        			Log.d("MainPage", "Starting to refresh devices.");
         		while (refreshing) {
         			try {
         				sleep(1000);
@@ -41,9 +53,11 @@ public class MainPage extends ListActivity {
         			if (!paused) {
         				Log.d("MainPage", "Adding a new item here.");
         				numItems++;
-        				TextView t = new TextView(MainPage.this);
-        				t.setText("I am " + numItems);
-        				discoveredDevicesAdapter.add(new RAOPDeviceDescription());
+        				
+        				RAOPDeviceDescription rd = new RAOPDeviceDescription();
+        				rd.setTitle("I am " + numItems);
+        				discoveredDevicesVector.add(rd);
+        				uiHandler.post(listUpdateRunnable);
         				
         				if (numItems > 5)
         					break;
@@ -53,7 +67,6 @@ public class MainPage extends ListActivity {
         		Log.d("MainPage", "Never refreshing again!");
         	}
         };
-        
         refreshListTimer.start();
         
     }
