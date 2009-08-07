@@ -1,9 +1,16 @@
 package com.aradine.android.raop;
 
+import java.net.InetAddress;
 import java.util.Vector;
 
-import android.app.ListActivity;
+import javax.jmdns.JmDNS;
+import javax.jmdns.ServiceListener;
 
+import android.app.ListActivity;
+import android.content.Context;
+
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -28,6 +35,13 @@ public class MainPage extends ListActivity {
     		}
     	}
     };
+    
+    
+    public static JmDNS jmdns;
+	protected ServiceListener listener;
+    
+	public final static String AIRFOIL_TYPE = "_airfoilspeaker._tcp.local.";
+	public final static String HOST_NAME = "netrig1";
     
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -69,6 +83,43 @@ public class MainPage extends ListActivity {
         };
         refreshListTimer.start();
         
+    }
+    
+    protected void startDeviceDiscovery() {
+    	if (MainPage.jmdns != null)
+    		stopDeviceDiscovery();
+    	
+    	discoveredDevicesVector.clear();
+    	
+    	// figure out our wifi address, otherwise bail
+		WifiManager wifi = (WifiManager)this.getSystemService(Context.WIFI_SERVICE);
+		
+		WifiInfo wifiinfo = wifi.getConnectionInfo();
+		int intaddr = wifiinfo.getIpAddress();
+		
+		byte[] byteaddr = new byte[] { (byte)(intaddr & 0xff), (byte)(intaddr >> 8 & 0xff), (byte)(intaddr >> 16 & 0xff), (byte)(intaddr >> 24 & 0xff) };
+		InetAddress addr = null;
+		try {
+			addr = InetAddress.getByAddress(byteaddr);
+		} catch (Exception e) {
+			Log.e("MainPage", "Can't get my own address: " + e.getMessage());
+		}
+		
+		Log.d("MainPage", String.format("found intaddr=%d, addr=%s", intaddr, addr.toString()));
+		
+		try {
+			MainPage.jmdns = JmDNS.create(addr, HOST_NAME);
+		} catch (Exception e) {
+			Log.e("MainPage", "Can't create JmDNS object: " + e.getMessage());
+		}
+		MainPage.jmdns.addServiceListener(AIRFOIL_TYPE, listener);
+    
+    }
+    
+    protected void stopDeviceDiscovery() {
+    	MainPage.jmdns.removeServiceListener(AIRFOIL_TYPE, listener);
+    	MainPage.jmdns.close();
+    	MainPage.jmdns = null;
     }
     
     @Override
