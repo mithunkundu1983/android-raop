@@ -1,0 +1,1 @@
+An Android app to stream music from the Android device to RAOP-enabled devices on the local network, such as Apple Airport Express devices or computers running Rogue Amoeba's Airfoil Speakers.
